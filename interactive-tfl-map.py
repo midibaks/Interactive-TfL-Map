@@ -16,11 +16,50 @@ for idx, row in stations.iterrows():
         node_attributes[line] = row[line]
     G.add_node(row['OBJECTID'], **node_attributes)
 
-# Acceptable score differences for undirected graphs (i.e. two-way routes, which are the vast majority)
+# The following shows acceptable score differences for undirected graphs (i.e. two-way routes, which are the vast majority).
+
 u_tolerances = [1, 0.01, 0.0001, 0.000001]
 
-# Acceptable score differences for directed graphs (i.e. one-way routes for Piccadilly at Heathrow T4 and Tram in Croydon)
+# Within a line, any pair of stations with score diff of 1 are adjacent to each other. 
+
+# If there are n additional branches of the line that branch out from one station, then the score diffs 
+# on one branch will be 1/100, then 1/(100^2) on another, all the way up to score diffs of 1/(100^n).
+
+# On the TfL network, there are a maximum of 3 additional branches from one station (Earl's Court on the District line);
+# you have the main 'stem' going to Upminster, and then the branches to Wimbledon, Edgware Road and Kensington Olympia.
+# Therefore, the acceptable score differences go up to 1/(100^3).
+
+# I've used 1/100, because if 1/10 was used instead, the scores would seep into the unit digits if there are more than 
+# 9 stations in a branch (e.g. scores would be 5.1, 5.2, 5.3, ... 6, 6.1), which can be the case on the TfL network.
+# The computer will think that the station with a score of 6, will be adjacent to station with a score of 5 
+# (6-5 gives a score diff of 1, which is a signal for edge creation), which is most likely not going to be the case. 
+# The same goes for stations with score differences 5.1 and 6.1, 5.2 and 6.2, etc.
+
+# For instance, if Camden Town had a score of 10, Kentish Town would have a score of 10.1, and then going along the
+# whole branch, High Barnet would have a score of 11. This would imply that Camden Town is adjacent to High Barnet.
+
+# 1/100 has been chosen as there are no branches with 100 stations, so the above phenomenon wouldn't occur.
+
+# The following shows acceptable score differences for directed graphs (i.e. one-way routes for Piccadilly at 
+# Heathrow T4 and Tramlink in Croydon)
+
 d_tolerances = [100, 700, 1000, 5000, 10000, 10001]
+
+# To distinguish stations on one-way routes, I've gone the other way and have initially used 100 as a score diff for the 
+# one-way system on the Wimbeck line in Croydon.
+
+# However, I needed to create an edge between Church Street (with a score of 713) and Wandle Park (with a score of 13),
+# so I had to include 700 as an acceptable score diff.
+
+# I initially tried to use the score diff of 100 again for the one-way system on the Loop line in Croydon, but as there
+# are 5 stops on this loop, I would need to use 500 as an acceptable score diff, which would also create an edge between 
+# Wandle Park and East Croydon (with scores 13 and 513 respectively), which doesn't exist on the network.
+
+# There are no one-way routes with more than 10 stops, so I was able to use 1000 as score diff for that one-way
+# system on the Loop line in Croydon, and then 10000 for the one-way system in Heathrow.
+
+# The 5000 connects Wellesley Road with East Croydon on the Loop line, and the 10001 connects Heathrow T4 with
+# Heathrow T123 on the Piccadilly line. 
 
 # Iterate over all pairs of nodes
 for i in G.nodes:
@@ -34,7 +73,7 @@ for i in G.nodes:
             if pd.notna(score_i) and pd.notna(score_j):
                 diff = abs(score_i - score_j)
 
-            # Check if difference is exactly 1, 0.01, 0.001, 0.0001 or 0.00001 (within a small floating point tolerance)
+            # Check if difference is exactly 1, 0.01, 0.0001 or 0.000001 (within a small floating point tolerance)
                 for u_tol in u_tolerances:
                     if abs(diff - u_tol) < 1e-9:
                         # Add edge if criteria met
