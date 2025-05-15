@@ -156,7 +156,7 @@ for u, v, data in G.edges(data=True):
             # The score_diff for directed edges stores the actual difference (score_v - score_u)
             score_diff = data.get('score_diff')
 
-            # If the stored score_diff is in the directed tolerances, draw a dashed arrow.
+            # If the stored score_diff is in the directed tolerances, draw a dashed line.
             if abs(score_diff) in [100, 700, 1000, 5000, 10000, 10001]: # Check absolute value against tolerances
                 folium.PolyLine(
                     locations=[(y1, x1), (y2, x2)], # Use (lat, lon) format
