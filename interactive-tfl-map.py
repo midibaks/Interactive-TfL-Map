@@ -92,9 +92,27 @@ m = folium.Map(location=[51.5081, -0.1248], zoom_start=12)
 # Draw nodes
 for index, row in stations.iterrows(): # Iterate through DataFrame rows to get OBJECTID and location
     node_id = row['OBJECTID']
+    
     # Folium expects (latitude, longitude). The pos dictionary has (x, y) which are likely (longitude, latitude)
     # Need to swap x and y if x is longitude and y is latitude
+    
     station_pos = (pos[node_id][1], pos[node_id][0]) # Swap (longitude, latitude) to (latitude, longitude) for Folium
+
+    passenger_count = row['Weekly passenger count 2024']
+    if pd.isna(passenger_count):
+        passenger_count_display = "--"
+    else:
+        # Format the integer with commas
+        passenger_count_display = f"{int(passenger_count):,}"
+
+    popup_html = f"""
+    <div style="width: 200px; height: 100px;">
+        <b>Station:</b> {index}<br><br>
+        <b>Lines:</b> {row['NETWORK']}<br><br>
+        <b>Weekly passenger count 2024:</b> {passenger_count_display}
+    </div>
+    """
+    
     folium.CircleMarker(
         location=station_pos, # Use the specific location for the current node
         radius=6,
