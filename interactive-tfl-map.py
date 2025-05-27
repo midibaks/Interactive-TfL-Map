@@ -2,12 +2,16 @@ import networkx as nx
 import pandas as pd
 import folium
 
-stations = pd.read_csv('Stations2018_Updated.csv', index_col='NAME')
+stations = pd.read_csv('Stations info-Stations 2024.csv', index_col='NAME')
 
 G = nx.MultiDiGraph()
 
 # List of category column names
 lines = list(stations.columns[9:33])
+
+# Convert the line score columns to numeric, coercing errors to NaN
+for line in lines:
+    stations[line] = pd.to_numeric(stations[line], errors='coerce')
 
 # Add nodes with position attribute and line scores
 for idx, row in stations.iterrows():
@@ -73,7 +77,7 @@ for i in G.nodes:
             if pd.notna(score_i) and pd.notna(score_j):
                 diff = abs(score_i - score_j)
 
-            # Check if difference is exactly 1, 0.01, 0.0001 or 0.000001 (within a small floating point tolerance)
+            # Check if difference is exactly 1, 0.01, 0.001, 0.0001 or 0.00001 (within a small floating point tolerance)
                 for u_tol in u_tolerances:
                     if abs(diff - u_tol) < 1e-9:
                         # Add edge if criteria met
@@ -92,10 +96,8 @@ m = folium.Map(location=[51.5081, -0.1248], zoom_start=12)
 # Draw nodes
 for index, row in stations.iterrows(): # Iterate through DataFrame rows to get OBJECTID and location
     node_id = row['OBJECTID']
-    
     # Folium expects (latitude, longitude). The pos dictionary has (x, y) which are likely (longitude, latitude)
     # Need to swap x and y if x is longitude and y is latitude
-    
     station_pos = (pos[node_id][1], pos[node_id][0]) # Swap (longitude, latitude) to (latitude, longitude) for Folium
 
     passenger_count = row['Weekly passenger count 2024']
@@ -112,14 +114,14 @@ for index, row in stations.iterrows(): # Iterate through DataFrame rows to get O
         <b>Weekly passenger count 2024:</b> {passenger_count_display}
     </div>
     """
-    
+
     folium.CircleMarker(
         location=station_pos, # Use the specific location for the current node
         radius=6,
         color='black',
         fill=True,
         fill_color='black',
-        popup=index # Use the station name for the popup
+        popup=popup_html
     ).add_to(m)
 
 # Draw edges
@@ -174,7 +176,7 @@ for u, v, data in G.edges(data=True):
             # The score_diff for directed edges stores the actual difference (score_v - score_u)
             score_diff = data.get('score_diff')
 
-            # If the stored score_diff is in the directed tolerances, draw a dashed line.
+            # If the stored score_diff is in the directed tolerances, draw a dashed arrow.
             if abs(score_diff) in [100, 700, 1000, 5000, 10000, 10001]: # Check absolute value against tolerances
                 folium.PolyLine(
                     locations=[(y1, x1), (y2, x2)], # Use (lat, lon) format
@@ -197,7 +199,3 @@ for u, v, data in G.edges(data=True):
         ).add_to(m)
 
 m.save("tfl_lines_on_map.html")
-
-
-
-
